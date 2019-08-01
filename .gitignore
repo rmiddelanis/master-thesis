@@ -1,0 +1,21 @@
+# untracked folders
+
+__pycache__/
+.idea/
+Activation_Visualization/Experiments/**
+experiments/**
+figures/**
+optimizations/**
+Transferability_Investigation/**
+.ipynb_checkpoints/
+
+# untracked filetypes
+
+*.pt
+
+
+# untracked files
+
+**/model.pt
+**/test_losses_array.p
+**/activaiton_maps*.svg
