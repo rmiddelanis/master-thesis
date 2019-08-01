@@ -40,7 +40,7 @@ The following Python scripts are requried for the minimal working example[^1]:
       model.py            // model class
       utils.py            // helper functions
       preprocessing.py    // preprocessing class
-      tcn.py[^1]          // original core TCN class
+      tcn.py              // original core TCN class with small adaptations. The original class can be found at https://github.com/locuslab/TCN
 ```
 
 <!--
@@ -51,8 +51,6 @@ The following Python scripts are requried for the minimal working example[^1]:
 *  ``tcn.py``[^1]
 -->
 
-[^1]: The file tcn.py is the TCN class by Bai et al. with small adaptations. 
-The original class can be found at https://github.com/locuslab/TCN.
 
 ### Dataset
 The model can work with univariate and multivariate time series to be predicted.
