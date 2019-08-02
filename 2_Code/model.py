@@ -14,14 +14,12 @@ class TCN(nn.Module):
                  log_interval=5, lr=1e-3, optim='Adam', nhid=150, validseqlen=320, seqstepwidth=50, seq_len=400,
                  batch_size=32):
         super(TCN, self).__init__()
-
         print("Initializing TCN with input_size={0}, output_size={1}, cuda={2}, ksize={3}, dropout={4}, "
               "clip={5}, epochs={6}, levels={7}, log_interval={8}, lr={9}, optim={10}, nhid={11}, "
               "validseqlen={12}, seq_len={13}, batch_size={14} ".format(input_size, output_size, cuda, ksize,
                                                                         dropout, clip, epochs, levels, log_interval,
                                                                         lr, optim, nhid, validseqlen, seq_len,
                                                                         batch_size))
-
         self.config = ModelConfig()
         self.config.input_size = input_size
         self.config.output_size = output_size
@@ -40,14 +38,11 @@ class TCN(nn.Module):
         self.config.seq_len = seq_len
         self.config.batch_size = batch_size
         self.config.n_channels = [self.config.nhid] * self.config.levels
-
         self.tcn = TemporalConvNet(input_size, self.config.n_channels, kernel_size=ksize, dropout=dropout)
         self.linear = nn.Linear(self.config.n_channels[-1], output_size)
         self.init_weights()
-
         if cuda:
             self.cuda()
-
         self.criterion = nn.MSELoss()
         # self.criterion = nn.L1Loss()
         self.optimizer = getattr(opt, self.config.optim)(self.parameters(), lr=lr)
@@ -69,13 +64,11 @@ class TCN(nn.Module):
             all_epoch_train_losses = []
             all_epoch_valid_losses = []
             all_epoch_test_losses = []
-
             for epoch in range(1, self.config.epochs + 1):
                 self.train_epoch(x_train, y_train, epoch)
                 epoch_train_losses = self.evaluate(x_train, y_train)
                 epoch_train_loss_avg = sum(epoch_train_losses) / len(epoch_train_losses)
                 all_epoch_train_losses.append(epoch_train_loss_avg)
-
                 if x_valid is not None and y_valid is not None:
                     epoch_valid_losses = self.evaluate(x_valid, y_valid)
                     epoch_valid_loss_avg = sum(epoch_valid_losses) / len(epoch_valid_losses)
@@ -84,13 +77,11 @@ class TCN(nn.Module):
                         epoch, epoch_valid_loss_avg, epoch_valid_loss_avg / math.log(2)), post_sep=False)
                 else:
                     all_epoch_valid_losses.append(-1)
-
                 epoch_test_losses = self.evaluate(x_test, y_test)
                 epoch_test_loss_avg = sum(epoch_test_losses) / len(epoch_test_losses)
                 all_epoch_test_losses.append(epoch_test_loss_avg)
                 self.print_train_status(pre_sep=False, text='| End of epoch {:3d} | test loss {:5.3f} | test bpc {:8.3f}'.format(
                     epoch, epoch_test_loss_avg, epoch_test_loss_avg / math.log(2)), post_sep=True)
-
                 if lr_adapt is not None:
                     self.adapt_learn_rate(epoch, lr_adapt, all_epoch_valid_losses)
                     if self.config.lr < 1e-6:
@@ -228,7 +219,6 @@ class NetworkEvaluator(BaseEstimator, RegressorMixin):
         self.seqstepwidth = seqstepwidth
         self.seq_len = seq_len
         self.batch_size = batch_size
-
         self.model = TCN(input_size, output_size, cuda=cuda, ksize=ksize, dropout=dropout, clip=clip, epochs=epochs,
                          levels=levels, log_interval=log_interval, lr=lr, optim=optim, nhid=nhid, validseqlen=validseqlen,
                          seqstepwidth=seqstepwidth, seq_len=seq_len, batch_size=batch_size)

@@ -53,7 +53,6 @@ parser.add_argument('--dataset_path', type=str, default=r'./data/Synthetic/synth
 args = parser.parse_args()
 print(args)
 
-
 dataset_config = {
     'test_size': 0.2,
     'sampling_size': 1,
@@ -84,22 +83,18 @@ test_hyperparams = {
 
 
 def run(optimize=False):
-
     if args.seed != -1:
         torch.manual_seed(args.seed)
         torch.cuda.manual_seed(args.seed)
     else:
         torch.cuda.seed_all()
-
     if torch.cuda.is_available():
         if not args.cuda:
             print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
     data, pca_scaler = data_generator(dataset_config)
-
     data.x_valid = data.x_valid[0]
     data.y_valid = data.y_valid[0]
-
     if args.cuda:
         data.x_train = data.x_train.cuda()
         data.x_test = data.x_test.cuda()
@@ -107,7 +102,6 @@ def run(optimize=False):
         data.y_train = data.y_train.cuda()
         data.y_test = data.y_test.cuda()
         data.y_valid = data.y_valid.cuda()
-
     input_size = data.x_train.size(1)
     output_size = data.y_train.size(1)
 
@@ -115,7 +109,6 @@ def run(optimize=False):
         optimizations_path = "./optimizations/"
         optimization_experiment_folder = make_experiment_dir(optimizations_path)
         save_args(optimization_experiment_folder, args)
-
         print("Saving best Random Search Field...")
         with open(optimization_experiment_folder + "random_search_field.txt", "w") as file:
             for key, value in test_hyperparams.items():
@@ -123,13 +116,11 @@ def run(optimize=False):
                 file.write(line)
         file.close()
         print('Saved as %s' % optimization_experiment_folder + "random_search_field.txt")
-
         rs = RandomizedSearchCV(NetworkEvaluator(input_size, output_size, args.cuda), test_hyperparams, n_jobs=1)
         rs.fit(data.x_train.cpu().numpy(), y=data.y_train.cpu().numpy())
         best_estimator = rs.best_estimator_
         print("Best Params: \n")
         print(rs.best_params_)
-
         print("Saving best Parameters...")
         with open(optimization_experiment_folder + "best_params.txt", "w") as file:
             for key, value in rs.best_params_.items():
@@ -145,7 +136,6 @@ def run(optimize=False):
                     epochs=args.epochs, levels=args.levels, log_interval=args.log_interval, lr=args.lr,
                     optim=args.optim, nhid=args.nhid, validseqlen=args.validseqlen, seqstepwidth=args.seqstepwidth,
                     seq_len=args.seq_len, batch_size=args.batch_size)
-
         all_epoch_train_losses, all_epoch_valid_losses, all_epoch_test_losses = model.fit_and_test(x_train=data.x_train,
                                                                                                    y_train=data.y_train,
                                                                                                    x_test=data.x_test,
@@ -154,7 +144,6 @@ def run(optimize=False):
                                                                                                    y_valid=data.y_valid,
                                                                                                    lr_adapt=args.lr_adapt,
                                                                                                    experiment_folder=experiment_folder)
-
         save_args(experiment_folder, args)
         plot_and_save_prediction(model, data.x_test, data.y_test, args, path=experiment_folder)
         plot_and_save([all_epoch_train_losses, all_epoch_valid_losses, all_epoch_test_losses],

@@ -16,10 +16,8 @@ def data_generator(dataset_config):
 
     series_x_selection = [int(i) == True for i in list(dataset_config['series_x'])]
     series_y_selection = [int(i) == True for i in list(dataset_config['series_y'])]
-
     selected_columns_x = [i for i in range(len(series_x_selection)) if series_x_selection[i]]
     selected_columns_y = [i for i in range(len(series_y_selection)) if series_y_selection[i]]
-
     data.x_train = data.x_train[:, selected_columns_x]
     for i in range(len(data.x_valid)):
         data.x_valid[i] = data.x_valid[i][:, selected_columns_x]
@@ -106,7 +104,6 @@ def plot_and_save_prediction(model, source, target, args, clip=1e5, path="./figu
         x = torch.zeros(num_sequences, num_channels_x, args.seq_len)#.type('torch.FloatTensor')
         if args.cuda:
             x = x.cuda()
-        # x = source[:,offset:offset+num_sequences*args.seq_len].contiguous().view(-1,num_channels_x,args.seq_len)
         for channel in range(num_channels_x):
             x[:, channel, :] = source[channel, offset:offset+num_sequences*args.seq_len].contiguous().view(num_sequences, args.seq_len)
         for counter, batch_idx in enumerate(range(0, x.size(0), args.batch_size)):
@@ -115,10 +112,6 @@ def plot_and_save_prediction(model, source, target, args, clip=1e5, path="./figu
             else:
                 batch = x[batch_idx:, :, :]
             batch_prediction = model(batch).detach()
-            # start_index = offset + counter*args.batch_size*args.seq_len
-            # stop_index = offset + counter*args.batch_size*args.seq_len + batch_prediction.size(0)*args.seq_len
-            # prediction_slicer = slice(start_index, stop_index, args.seq_len)
-            # prediction[:,prediction_slicer] = batch_prediction[:,:,-1].contiguous().view(num_channels_y,-1)
             for i in range(batch_prediction.size(0)):
                 prediction[:, offset+batch_idx*args.seq_len+i*args.seq_len] = batch_prediction[i, :, -1]
         if offset % 10 == 0:
@@ -196,7 +189,6 @@ def plot_and_save(y_ranges, y_names, path, x_ranges=[], x_names=[], texts=[], **
     figure = plt.figure(figsize=(25, 8))
     for channel in range(len(y_ranges)):
         ax = plt.subplot(2, int(len(y_ranges)/2+0.5), channel + 1)
-        # plt.plot(final_y_pred[:, n], label='predicted')
         ax.plot(x_ranges[channel], y_ranges[channel], **plot_kwargs)
         ax.legend()
         ax.set_title(y_names[channel])

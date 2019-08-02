@@ -68,7 +68,6 @@ class TemporalBlock(nn.Module):
         # out = the straight path through the residual block (figure 1(b)) with
         # optional 1x1 convolution
         res = x if self.downsample is None else self.downsample(x)
-
         return self.relu(out + res)
 
 
@@ -89,7 +88,6 @@ class TemporalConvNet(nn.Module):
             out_channels = num_channels[i]
             layers += [TemporalBlock(n_inputs=in_channels, n_outputs=out_channels, kernel_size=kernel_size, stride=1,
                                      dilation=dilation_size, padding=(kernel_size-1) * dilation_size, dropout=dropout)]
-
         self.network = nn.Sequential(*layers)
 
     def forward(self, x):

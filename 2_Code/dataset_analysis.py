@@ -121,7 +121,7 @@ def plot_autocorrelation(data, path, max_lag=1000, width=10, height=3,):
 
 def calc_autocorrelation(series, max_k):
     series_zero_mean = series - np.mean(series)
-    if max_k>len(series):
+    if max_k > len(series):
         print('Warning: maximum lag max_k should be smaller than the length of the series for which autocorrelation shall be '
                          'computed. Using length-1 of the series instead.')
     denom = np.dot(series_zero_mean, series_zero_mean)
@@ -220,24 +220,19 @@ if __name__ == "__main__":
     root_dir = "./data/"
     max_samples_ = int(1e3)
     scatter_sample_size = int(1e3)
-
     for key, value in dataset_settings.items():
         dataset_name = key
         load_func = value['dataset_load_func']
         subsampling_frequencies = value['subsampling']
-
         corr_dir = root_dir + dataset_name + "/Dataset_Analysis/Correlation/"
         if not os.path.exists(corr_dir):
             os.makedirs(corr_dir)
-
         temporal_plots_dir = root_dir + dataset_name + "/Dataset_Analysis/Temporal_Plots/"
         if not os.path.exists(temporal_plots_dir):
             os.makedirs(temporal_plots_dir)
-
         data_ = globals()[load_func]()
         if len(data_) > 1:
             data_ = [pd.concat(data_, axis=1)] + data_
-
         for frequency in subsampling_frequencies:
             corr_freq_dir = root_dir + dataset_name + "/Dataset_Analysis/Correlation/Sampling_"+frequency+"/"
             if not os.path.exists(corr_freq_dir):
