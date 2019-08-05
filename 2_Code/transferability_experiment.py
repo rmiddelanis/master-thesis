@@ -349,9 +349,11 @@ def notraining_models(experiment_round, model_a, model_b, experiment_folder):
     pickle.dump(test_loss_b_avg, open(path_b + "test_losses_array.p", "wb"))
 
 
-""" function to fix a previous error in the way the base losses were stored by function "notraining_models":
-    previously, notraining_models stored the base model losses of all batches and not the average """
 def fix_base_a_losses(experiment_ensemble_dir):
+    """
+    function to fix a previous error in the way the base losses were stored by function "notraining_models":
+    previously, notraining_models stored the base model losses of all batches and not the average
+    """
     experiment_dir = os.path.join(experiment_ensemble_dir, "random_reference/")
     for experiment_dir_entry in os.listdir(experiment_dir):
         if os.path.isdir(os.path.join(experiment_dir, experiment_dir_entry)):
@@ -757,11 +759,11 @@ def make_quantitative_experiment_lossplot(experiment_dir, experiment_name, best_
     for layer in range(best_model_losses.shape[1]):
         loss_vals = best_model_losses[:, layer, 0]
         fig_objects['selffer_best_sc'] = ax01.scatter(layer + 0 * loss_vals - horizontal_marker_offset,
-                                                      loss_vals, marker='+', c='b',s=markersize)
+                                                      loss_vals, marker='+', c='b', s=markersize)
     for layer in range(best_model_losses.shape[1]):
         loss_vals = best_model_losses[:, layer, 1]
         fig_objects['transfer_best_sc'] = ax01.scatter(layer + 0 * loss_vals + horizontal_marker_offset,
-                                                       loss_vals, marker='x', c='r',s=markersize)
+                                                       loss_vals, marker='x', c='r', s=markersize)
     ax01.legend([fig_objects['base'], fig_objects['selffer_best_sc'], fig_objects['transfer_best_sc']],
                 ['Base {}'.format(selffer_name[-1:]),
                  'Reduced Base {}'.format(selffer_name[-1:]),
