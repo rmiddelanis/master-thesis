@@ -106,64 +106,6 @@ if torch.cuda.is_available():
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
 
-def calc_data_split(splitsize_ref_path):
-    initial_split_params = dataset_config['train_valid_split']
-    best_losses_a = []
-    best_losses_b = []
-    all_losses = []
-    real_train_sizes_rel = []
-    for train_size in np.arange(0.05, 0.55, 0.05):
-        iteration_folder = splitsize_ref_path + "TuneSize_" + str(train_size) + "/"
-        if not os.path.exists(iteration_folder):
-            os.makedirs(iteration_folder)
-        dataset_config['train_valid_split'] = [1-train_size, train_size]
-        load_data()
-
-        # swap train and tune set so that train_models(0,...) can be used for training on the tune set
-        global x_train
-        global x_tune
-        global y_train
-        global y_tune
-        temp = x_train
-        x_train = x_tune
-        x_tune = temp
-        temp = y_train
-        y_train = y_tune
-        y_tune = temp
-        real_train_sizes_rel.append(x_train.shape[0]*x_train.shape[2]/(x_train.shape[0]*x_train.shape[2] +
-                                                                       x_tune.shape[0]*x_tune.shape[2]))
-        model_a = TCN(1, 1, cuda=experiment_config['cuda'], ksize=experiment_config['ksize'],
-                      dropout=experiment_config['dropout'], clip=experiment_config['clip'],
-                      epochs=experiment_config['epochs'], levels=experiment_config['levels'],
-                      log_interval=experiment_config['log_interval'], lr=experiment_config['lr_init'],
-                      optim=experiment_config['optim'], nhid=experiment_config['nhid'],
-                      validseqlen=experiment_config['validseqlen'],
-                      seqstepwidth=experiment_config['seqstepwidth_train'],
-                      seq_len=experiment_config['seq_len'], batch_size=experiment_config['batch_size'])
-        model_b = TCN(1, 1, cuda=experiment_config['cuda'], ksize=experiment_config['ksize'],
-                      dropout=experiment_config['dropout'], clip=experiment_config['clip'],
-                      epochs=experiment_config['epochs'], levels=experiment_config['levels'],
-                      log_interval=experiment_config['log_interval'], lr=experiment_config['lr_init'],
-                      optim=experiment_config['optim'], nhid=experiment_config['nhid'],
-                      validseqlen=experiment_config['validseqlen'],
-                      seqstepwidth=experiment_config['seqstepwidth_train'],
-                      seq_len=experiment_config['seq_len'], batch_size=experiment_config['batch_size'])
-        losses_a, losses_b = train_models(0, model_a, model_b, iteration_folder, is_quantitative_experiment=False)
-        all_losses.append([losses_a, losses_b])
-        if not experiment_config['store_models']:
-            os.remove(iteration_folder + "0_base_A/model.pt")
-            os.remove(iteration_folder + "0_base_B/model.pt")
-        best_losses_a.append(min(losses_a))
-        best_losses_b.append(min(losses_b))
-    plot_kwargs = {'marker': 'o'}
-    plot_and_save([best_losses_a, best_losses_b],
-                  ["Best Testloss over TuneSet Size [Model A]", "Best Testloss over TuneSet Size [Model B]"],
-                  splitsize_ref_path + "testlosses.svg", x_names=["TuneSet Size", "TuneSet Size"],
-                  x_ranges=[real_train_sizes_rel, real_train_sizes_rel], **plot_kwargs)
-    pickle.dump(all_losses, open(splitsize_ref_path + "all_results_array.p", "wb"))
-    dataset_config['train_valid_split'] = initial_split_params
-
-
 def do_experiment_series(experiment_series_dir, num_repetitions, is_quantitative_experiment, freeze, random_init,
                          diff_learning_rate, train_base):
     experiment_final_results = []
@@ -346,44 +288,6 @@ def notraining_models(experiment_round, model_a, model_b, experiment_folder):
     pickle.dump(test_loss_b_avg, open(path_b + "test_losses_array.p", "wb"))
 
 
-def fix_base_a_losses(experiment_ensemble_dir):
-    """
-    function to fix a previous error in the way the base losses were stored by function "notraining_models":
-    previously, notraining_models stored the base model losses of all batches and not the average
-    """
-    experiment_dir = os.path.join(experiment_ensemble_dir, "random_reference/")
-    for experiment_dir_entry in os.listdir(experiment_dir):
-        if os.path.isdir(os.path.join(experiment_dir, experiment_dir_entry)):
-            base_a_losses_iter = pickle.load(
-                open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_A", "test_losses_array.p"), "rb"))
-            base_b_losses_iter = pickle.load(
-                open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_B", "test_losses_array.p"), "rb"))
-            if len(base_a_losses_iter) == 1:
-                print("Base A loss in path {} seems to be fixed already. Doing nothing!".format(
-                    os.path.join(experiment_dir, experiment_dir_entry)))
-            else:
-                pickle.dump(base_a_losses_iter, open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_A",
-                                                                  "test_losses_array_old.p"), "wb"))
-                base_a_losses_iter = np.array([sum(base_a_losses_iter) / len(base_a_losses_iter)])
-                pickle.dump(base_a_losses_iter, open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_A",
-                                                                  "test_losses_array.p"), "wb"))
-                print("Replaced test_losses_array.p in path {} with corrected array. "
-                      "Old values are stored in as test_losses_array_old.p".format(os.path.join(experiment_dir,
-                                                                                                experiment_dir_entry)))
-            if len(base_b_losses_iter) == 1:
-                print("Base B loss in path {} seems to be fixed already. Doing nothing!".format(
-                    os.path.join(experiment_dir, experiment_dir_entry)))
-            else:
-                pickle.dump(base_a_losses_iter, open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_B",
-                                                                  "test_losses_array_old.p"), "wb"))
-                base_a_losses_iter = np.array([sum(base_a_losses_iter) / len(base_a_losses_iter)])
-                pickle.dump(base_a_losses_iter, open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_B",
-                                                                  "test_losses_array.p"), "wb"))
-                print("Replaced test_losses_array.p in path {} with corrected array. "
-                      "Old values are stored in as test_losses_array_old.p".format(os.path.join(experiment_dir,
-                                                                                                experiment_dir_entry)))
-
-
 def make_iteration_dirs(experiment_folder, experiment_round):
     if experiment_round == 0:
         path_a = os.path.join(experiment_folder, "0_base_A/")
@@ -402,43 +306,6 @@ def make_iteration_dirs(experiment_folder, experiment_round):
         save_path_a = None
         save_path_b = None
     return path_a, path_b, save_path_a, save_path_b
-
-
-def train_reference(experiment_dir, num_repetitions, freeze_conv_layers):
-    all_test_losses = []
-    for repetition in range(num_repetitions):
-        testlosses = []
-        repetition_path = experiment_dir + "Iteration_" + str(repetition) + "/"
-        os.makedirs(repetition_path)
-        linear_model = TCN(1, 1, cuda=experiment_config['cuda'], ksize=experiment_config['ksize'],
-                           dropout=experiment_config['dropout'], clip=experiment_config['clip'],
-                           epochs=experiment_config['epochs'], levels=experiment_config['levels'],
-                           log_interval=experiment_config['log_interval'], lr=experiment_config['lr_init'],
-                           optim=experiment_config['optim'], nhid=experiment_config['nhid'],
-                           validseqlen=experiment_config['validseqlen'],
-                           seqstepwidth=experiment_config['seqstepwidth_train'], seq_len=experiment_config['seq_len'],
-                           batch_size=experiment_config['batch_size'])
-        if freeze_conv_layers:
-            for param in linear_model.tcn.parameters():
-                param.requires_grad = False
-        for epoch in range(experiment_config['epochs']):
-            linear_model.train_epoch(x_tune[:, 0:1, :], y_tune[:, 0:1, :], epoch)
-            test_loss = linear_model.evaluate(x_test[:, 0:1, :], y_test[:, 0:1, :])
-            testlosses.append(sum(test_loss)/len(test_loss))
-        if experiment_config['store_models']:
-            save_model(linear_model, repetition_path)
-        all_test_losses.append(testlosses)
-    all_test_losses = np.array(all_test_losses)
-    pickle.dump(all_test_losses, open(experiment_dir + "all_results_array.p", "wb"))
-
-    x = np.zeros(num_repetitions)
-    y_final = np.zeros((num_repetitions, 1))
-    y_best = np.zeros((num_repetitions, 1))
-    for repetition in range(num_repetitions):
-        y_final[repetition] = all_test_losses[repetition][-1]
-        y_best[repetition] = min(all_test_losses[repetition])
-    plot_results(x, y_final, experiment_dir, "final_model_plot")
-    plot_results(x, y_best, experiment_dir, "best_model_plot")
 
 
 def produce_synthetic_data(path):
@@ -481,6 +348,44 @@ def load_data():
         y_train = y_train.cuda()
         y_test = y_test.cuda()
         y_tune = y_tune.cuda()
+
+
+def fix_base_a_losses(experiment_ensemble_dir):
+    """
+    function to fix a previous error in the way the base losses were stored by function "notraining_models":
+    previously, notraining_models stored the base model losses of all batches and not the average
+    """
+    experiment_dir = os.path.join(experiment_ensemble_dir, "random_reference/")
+    for experiment_dir_entry in os.listdir(experiment_dir):
+        if os.path.isdir(os.path.join(experiment_dir, experiment_dir_entry)):
+            base_a_losses_iter = pickle.load(
+                open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_A", "test_losses_array.p"), "rb"))
+            base_b_losses_iter = pickle.load(
+                open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_B", "test_losses_array.p"), "rb"))
+            if len(base_a_losses_iter) == 1:
+                print("Base A loss in path {} seems to be fixed already. Doing nothing!".format(
+                    os.path.join(experiment_dir, experiment_dir_entry)))
+            else:
+                pickle.dump(base_a_losses_iter, open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_A",
+                                                                  "test_losses_array_old.p"), "wb"))
+                base_a_losses_iter = np.array([sum(base_a_losses_iter) / len(base_a_losses_iter)])
+                pickle.dump(base_a_losses_iter, open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_A",
+                                                                  "test_losses_array.p"), "wb"))
+                print("Replaced test_losses_array.p in path {} with corrected array. "
+                      "Old values are stored in as test_losses_array_old.p".format(os.path.join(experiment_dir,
+                                                                                                experiment_dir_entry)))
+            if len(base_b_losses_iter) == 1:
+                print("Base B loss in path {} seems to be fixed already. Doing nothing!".format(
+                    os.path.join(experiment_dir, experiment_dir_entry)))
+            else:
+                pickle.dump(base_a_losses_iter, open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_B",
+                                                                  "test_losses_array_old.p"), "wb"))
+                base_a_losses_iter = np.array([sum(base_a_losses_iter) / len(base_a_losses_iter)])
+                pickle.dump(base_a_losses_iter, open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_B",
+                                                                  "test_losses_array.p"), "wb"))
+                print("Replaced test_losses_array.p in path {} with corrected array. "
+                      "Old values are stored in as test_losses_array_old.p".format(os.path.join(experiment_dir,
+                                                                                                experiment_dir_entry)))
 
 
 def plot_results(x, y, path, name):
@@ -952,23 +857,6 @@ def get_conf_intervals(base_losses, model_losses, alpha):
     return [lower_bounds, upper_bounds]
 
 
-def make_model_loss_curve(path):
-    losses = pickle.load(open(path + "test_losses_array.p", "rb"))
-    matplotlib.rcParams.update({'font.size': global_font_size*0.8})
-    fig = plt.figure(figsize=[10, 3.75])
-    plt.plot(np.arange(1, len(losses)+1), losses, label="Model Loss")
-    plt.xlabel('Epoch')
-    plt.ylabel('Test Loss (lower is better)')
-    plt.legend()
-    fig.tight_layout()
-    if experiment_config['plot_svg']:
-        plt.savefig(os.path.join(path, "losses.svg"), format='svg')
-    else:
-        plt.savefig(os.path.join(path, "losses.pgf"), transparent=True)
-    plt.close('all')
-    matplotlib.rcParams.update({'font.size': global_font_size})
-
-
 def get_fig_name_suffix(selffer_name):
     if selffer_name[-1] == 'A':
         return ""
@@ -981,33 +869,6 @@ def load_experiment_config(path):
     with open(path, "r") as read_file:
         global experiment_config
         experiment_config = json.load(read_file)
-
-
-def calc_duration_variance(experiment_dir):
-    all_losses_a, all_losses_b, best_model_losses, final_model_losses, base_a_losses = load_experiment_losses(experiment_dir)
-    best_model_losses_indices_a, best_model_losses_indices_b, best_model_losses_indices_base = get_best_losses_indices(all_losses_a, all_losses_b, base_a_losses)
-    print('Standard deviations for base model in experiment in directory {}'.format(experiment_dir))
-    print('Base A Loss Std: {}'.format(np.std(best_model_losses_indices_a)))
-
-
-# make two one-sided t-tests (TOST) as a test for equivalence of sample means
-def calc_tost(a, b, delta, alpha):
-    n = len(a)
-    m = len(b)
-    mean_a = np.mean(a)
-    mean_b = np.mean(b)
-    sd_a = np.std(a)
-    sd_b = np.std(b)
-    delta_u = np.abs(delta)
-    delta_l = -np.abs(delta)
-    df = int((sd_a ** 2 / n + sd_b ** 2 / m) ** 2 / ((sd_a ** 2 / n) ** 2 / (n - 1) + (sd_b ** 2 / m) ** 2 / (m - 1)))
-    t_value = np.abs(stats.t.ppf(alpha, df=df))
-    denominator = math.sqrt(sd_a ** 2 / m + sd_b ** 2 / n)
-    t_upper = (mean_a - mean_b - delta_u) / denominator
-    t_lower = (mean_a - mean_b - delta_l) / denominator
-    if t_lower >= t_value and t_upper <= -t_value:
-        return True
-    return False
 
 
 if __name__ == "__main__":
@@ -1065,16 +926,3 @@ if __name__ == "__main__":
                          is_quantitative_experiment=True, freeze=True, random_init=False, diff_learning_rate=False,
                          train_base=True)
     make_figures(experiment_ensemble_folder)
-
-    # # linear reference model with random weights, all convolutional layers frozen and only the linear layer can
-    # # learn
-    # # exclude possibility that all knowledge is simply learned in the linear layer
-    # linear_ref_path = experiment_ensemble_folder + "linear_reference/"
-    # os.makedirs(linear_ref_path)
-    # train_reference(linear_ref_path, experiment_config['num_repetitions'], True)
-    #
-    # # random reference model with random weights, all convolutional layers and linear layer unfrozen
-    # # assess possibility if all knowledge can be learned only from the tune set
-    # random_ref_path = experiment_ensemble_folder + "random_reference/"
-    # os.makedirs(random_ref_path)
-    # train_reference(random_ref_path, experiment_config['num_repetitions'], False)
