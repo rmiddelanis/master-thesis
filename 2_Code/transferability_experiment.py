@@ -16,7 +16,6 @@ from matplotlib import colors
 import matplotlib
 import warnings
 
-
 experiment_config = {
     'cuda': True,
     'dropout': 0.05,
@@ -47,7 +46,6 @@ experiment_config = {
     # 'lr_adapt': None,
     'plot_svg': False,
 }
-
 
 dataset_config = {
     'test_size': 0.2,
@@ -83,6 +81,7 @@ figure_y_limits = {
     # 'all': (0.045, 0.15),
     'all': (0.03, 0.08),
 }
+
 experiment_name_solver = {
     'BnA': 'Hard Feature Extraction',
     'BnA_plus': 'Soft Feature Extraction',
@@ -167,8 +166,8 @@ def calc_data_split(splitsize_ref_path):
     dataset_config['train_valid_split'] = initial_split_params
 
 
-def make_experiment_series(experiment_series_dir, num_repetitions, is_quantitative_experiment, freeze, random_init,
-                           diff_learning_rate, train_base):
+def do_experiment_series(experiment_series_dir, num_repetitions, is_quantitative_experiment, freeze, random_init,
+                         diff_learning_rate, train_base):
     experiment_final_results = []
     experiment_best_results = []
     for repetition in range(num_repetitions):
@@ -1014,71 +1013,70 @@ def calc_tost(a, b, delta, alpha):
 
 
 if __name__ == "__main__":
-    for i in range(1):
-        experiment_ensemble_folder = make_experiment_dir("./Transferability_Investigation/")
-        print("Saving Parameters...")
-        with open(experiment_ensemble_folder + 'experiment_config.txt', 'w') as file:
-            file.write(json.dumps(experiment_config))
-        print('Saved as %s' % experiment_ensemble_folder + "experiment_config.txt")
-        with open(experiment_ensemble_folder + 'dataset_config.txt', 'w') as file:
-            file.write(json.dumps(dataset_config))
-        print('Saved as %s' % experiment_ensemble_folder + "dataset_config.txt")
-        load_data()
+    experiment_ensemble_folder = make_experiment_dir("./Transferability_Investigation/")
+    print("Saving Parameters...")
+    with open(experiment_ensemble_folder + 'experiment_config.txt', 'w') as file:
+        file.write(json.dumps(experiment_config))
+    print('Saved as %s' % experiment_ensemble_folder + "experiment_config.txt")
+    with open(experiment_ensemble_folder + 'dataset_config.txt', 'w') as file:
+        file.write(json.dumps(dataset_config))
+    print('Saved as %s' % experiment_ensemble_folder + "dataset_config.txt")
+    load_data()
 
-        # experiment BnA like in paper "How transferable are features in deep neural networks"
-        bna_path = experiment_ensemble_folder + "BnA/"
-        os.makedirs(bna_path)
-        make_experiment_series(experiment_series_dir=bna_path, num_repetitions=experiment_config['num_repetitions'],
-                               is_quantitative_experiment=False, freeze=True, random_init=True, diff_learning_rate=False,
-                               train_base=True)
-        # make_figures(experiment_ensemble_folder)
+    # experiment BnA like in paper "How transferable are features in deep neural networks"
+    bna_path = experiment_ensemble_folder + "BnA/"
+    os.makedirs(bna_path)
+    do_experiment_series(experiment_series_dir=bna_path, num_repetitions=experiment_config['num_repetitions'],
+                         is_quantitative_experiment=False, freeze=True, random_init=True, diff_learning_rate=False,
+                         train_base=True)
+    # make_figures(experiment_ensemble_folder)
 
-        # experiment BnA+ like in paper "How transferable are features in deep neural networks"
-        bna_plus_path = experiment_ensemble_folder + "BnA_plus/"
-        os.makedirs(bna_plus_path)
-        make_experiment_series(experiment_series_dir=bna_plus_path, num_repetitions=experiment_config['num_repetitions'],
-                               is_quantitative_experiment=False, freeze=False, random_init=True, diff_learning_rate=False,
-                               train_base=True)
-        # make_figures(experiment_ensemble_folder)
+    # experiment BnA+ like in paper "How transferable are features in deep neural networks"
+    bna_plus_path = experiment_ensemble_folder + "BnA_plus/"
+    os.makedirs(bna_plus_path)
+    do_experiment_series(experiment_series_dir=bna_plus_path, num_repetitions=experiment_config['num_repetitions'],
+                         is_quantitative_experiment=False, freeze=False, random_init=True, diff_learning_rate=False,
+                         train_base=True)
+    # make_figures(experiment_ensemble_folder)
 
-        # additional experiment with full weight initialization and partial freeze
-        full_weight_init_w_partial_freeze_path = experiment_ensemble_folder + "full_weight_init_w_partial_freeze/"
-        os.makedirs(full_weight_init_w_partial_freeze_path)
-        make_experiment_series(experiment_series_dir=full_weight_init_w_partial_freeze_path, num_repetitions=experiment_config['num_repetitions'],
-                               is_quantitative_experiment=False, freeze=True, random_init=False, diff_learning_rate=False,
-                               train_base=True)
-        # make_figures(experiment_ensemble_folder)
+    # additional experiment with full weight initialization and partial freeze
+    full_weight_init_w_partial_freeze_path = experiment_ensemble_folder + "full_weight_init_w_partial_freeze/"
+    os.makedirs(full_weight_init_w_partial_freeze_path)
+    do_experiment_series(experiment_series_dir=full_weight_init_w_partial_freeze_path, num_repetitions=experiment_config['num_repetitions'],
+                         is_quantitative_experiment=False, freeze=True, random_init=False, diff_learning_rate=False,
+                         train_base=True)
+    # make_figures(experiment_ensemble_folder)
 
-        # random reference model with random weights, gradually freeze conv layers
-        # exclude possibility that all knowledge is simply learned in the unfrozen random layers and transferred
-        # layers have no effect
-        random_ref_path = experiment_ensemble_folder + "random_reference/"
-        os.makedirs(random_ref_path)
-        make_experiment_series(experiment_series_dir=random_ref_path, num_repetitions=experiment_config['num_repetitions'],
-                               is_quantitative_experiment=False, freeze=True, random_init=False, diff_learning_rate=False,
-                               train_base=False)
-        # make_figures(experiment_ensemble_folder)
+    # random reference model with random weights, gradually freeze conv layers
+    # exclude possibility that all knowledge is simply learned in the unfrozen random layers and transferred
+    # layers have no effect
+    random_ref_path = experiment_ensemble_folder + "random_reference/"
+    os.makedirs(random_ref_path)
+    do_experiment_series(experiment_series_dir=random_ref_path, num_repetitions=experiment_config['num_repetitions'],
+                         is_quantitative_experiment=False, freeze=True, random_init=False, diff_learning_rate=False,
+                         train_base=False)
+    # make_figures(experiment_ensemble_folder)
 
-        # quantitative experiment
-        # l layers are transferred and directly mapped to the linear layer
-        # transferred layers are frozen --> only the linear layer is trained
-        quantitative_experiment_path = experiment_ensemble_folder + "quantitative_experiment/"
-        os.makedirs(quantitative_experiment_path)
-        make_experiment_series(experiment_series_dir=quantitative_experiment_path,
-                               num_repetitions=experiment_config['num_repetitions'],
-                               is_quantitative_experiment=True, freeze=True, random_init=False, diff_learning_rate=False,
-                               train_base=True)
-        make_figures(experiment_ensemble_folder)
+    # quantitative experiment
+    # l layers are transferred and directly mapped to the linear layer
+    # transferred layers are frozen --> only the linear layer is trained
+    quantitative_experiment_path = experiment_ensemble_folder + "quantitative_experiment/"
+    os.makedirs(quantitative_experiment_path)
+    do_experiment_series(experiment_series_dir=quantitative_experiment_path,
+                         num_repetitions=experiment_config['num_repetitions'],
+                         is_quantitative_experiment=True, freeze=True, random_init=False, diff_learning_rate=False,
+                         train_base=True)
+    make_figures(experiment_ensemble_folder)
 
-        # # linear reference model with random weights, all convolutional layers frozen and only the linear layer can
-        # # learn
-        # # exclude possibility that all knowledge is simply learned in the linear layer
-        # linear_ref_path = experiment_ensemble_folder + "linear_reference/"
-        # os.makedirs(linear_ref_path)
-        # train_reference(linear_ref_path, experiment_config['num_repetitions'], True)
-        #
-        # # random reference model with random weights, all convolutional layers and linear layer unfrozen
-        # # assess possibility if all knowledge can be learned only from the tune set
-        # random_ref_path = experiment_ensemble_folder + "random_reference/"
-        # os.makedirs(random_ref_path)
-        # train_reference(random_ref_path, experiment_config['num_repetitions'], False)
+    # # linear reference model with random weights, all convolutional layers frozen and only the linear layer can
+    # # learn
+    # # exclude possibility that all knowledge is simply learned in the linear layer
+    # linear_ref_path = experiment_ensemble_folder + "linear_reference/"
+    # os.makedirs(linear_ref_path)
+    # train_reference(linear_ref_path, experiment_config['num_repetitions'], True)
+    #
+    # # random reference model with random weights, all convolutional layers and linear layer unfrozen
+    # # assess possibility if all knowledge can be learned only from the tune set
+    # random_ref_path = experiment_ensemble_folder + "random_reference/"
+    # os.makedirs(random_ref_path)
+    # train_reference(random_ref_path, experiment_config['num_repetitions'], False)
