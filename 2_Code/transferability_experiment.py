@@ -81,18 +81,9 @@ figure_y_limits = {
     # 'all': (0.045, 0.15),
     'all': (0.03, 0.08),
 }
-
-experiment_name_solver = {
-    'BnA': 'Hard Feature Extraction',
-    'BnA_plus': 'Soft Feature Extraction',
-    'full_weight_init_w_partial_freeze': 'Full Weight init, partial Freeze',
-    'random_reference': 'Random Reference',
-}
-
 global_font_size = 20
 matplotlib.rcParams.update({'font.size': global_font_size})
 plt.rcParams['svg.fonttype'] = 'none'
-
 if not experiment_config['plot_svg']:
     matplotlib.use("pgf")
     pgf_with_rc_fonts = {
@@ -102,6 +93,13 @@ if not experiment_config['plot_svg']:
     }
     matplotlib.rcParams.update(pgf_with_rc_fonts)
     matplotlib.rcParams.update({'pgf.rcfonts': False})
+
+experiment_name_solver = {
+    'BnA': 'Hard Feature Extraction',
+    'BnA_plus': 'Soft Feature Extraction',
+    'full_weight_init_w_partial_freeze': 'Full Weight init, partial Freeze',
+    'random_reference': 'Random Reference',
+}
 
 if torch.cuda.is_available():
     if not experiment_config['cuda']:
@@ -286,7 +284,7 @@ def prepare_quantitative_experiment_models(round_, model_a_frozen, model_b_froze
         model_a_frozen.tcn.network[0].net = nn.Sequential(*[])
         model_b_frozen.tcn.network[0].net = nn.Sequential(*[])
 
-    # remove second conv, relu, dropout,
+    # remove second conv, relu and dropout
     if round_ % 2 == 0:
         model_a_frozen.tcn.network[-1].net = nn.Sequential(
             *list(model_a_frozen.tcn.network[-1].net.children())[:int(len(model_a_frozen.tcn.network[-1].net) / 2)])
