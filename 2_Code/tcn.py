@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 from torch.nn.utils import weight_norm
 
@@ -10,6 +9,7 @@ class Chomp1d(nn.Module):
 
     def forward(self, x):
         return x[:, :, :-self.chomp_size].contiguous()
+
 
 # TCN Residual Block as described in figure 1(b) of the paper
 class TemporalBlock(nn.Module):
@@ -84,10 +84,11 @@ class TemporalConvNet(nn.Module):
         # Create a Residual Block (=TemporalBlock) for each level (=layer)
         for i in range(num_levels):
             dilation_size = 2 ** i
-            in_channels = num_inputs if i == 0 else num_channels[i-1]
+            in_channels = num_inputs if i == 0 else num_channels[i - 1]
             out_channels = num_channels[i]
             layers += [TemporalBlock(n_inputs=in_channels, n_outputs=out_channels, kernel_size=kernel_size, stride=1,
-                                     dilation=dilation_size, padding=(kernel_size-1) * dilation_size, dropout=dropout)]
+                                     dilation=dilation_size, padding=(kernel_size - 1) * dilation_size,
+                                     dropout=dropout)]
         self.network = nn.Sequential(*layers)
 
     def forward(self, x):

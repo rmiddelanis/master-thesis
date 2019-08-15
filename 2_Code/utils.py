@@ -1,11 +1,12 @@
-import torch
-import numpy as np
 import os
-from preprocessing import DataCleaner
-import matplotlib.pyplot as plt
+from datetime import datetime
+
 import matplotlib as mpl
 import matplotlib.gridspec as gridspec
-from datetime import datetime
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from preprocessing import DataCleaner
 from sklearn.decomposition import PCA
 
 
@@ -78,44 +79,46 @@ def get_batch(source, target, start_index, seq_len):
     end_index = start_index + seq_len
     x = source[:, :, start_index:end_index].contiguous()
     # y = target[:, :, start_index+1:end_index+1].contiguous()  # x[n] and y[n+1]
-    y = target[:, :, start_index:end_index].contiguous()        # x[n] and y[n]
+    y = target[:, :, start_index:end_index].contiguous()  # x[n] and y[n]
     return x, y
 
 
 def save_model(model, path):
     print("Saving Model...")
     torch.save(model, os.path.join(path, 'model.pt'))
-    print('Saved as %s' % path+'model.pt')
+    print('Saved as %s' % path + 'model.pt')
 
 
 def plot_and_save_prediction(model, source, target, args, clip=1e5, path="./figures/"):
     source = debatchify(source)
     target = debatchify(target)
-    input_length = int((min(source.size(1)-1, target.size(1)-1, clip+args.seq_len)//args.seq_len)*args.seq_len)
+    input_length = int(
+        (min(source.size(1) - 1, target.size(1) - 1, clip + args.seq_len) // args.seq_len) * args.seq_len)
     source = source.narrow(1, 0, input_length)
     target = target.narrow(1, 0, input_length)
     num_channels_x = source.size(0)
     num_channels_y = target.size(0)
     # prediction = np.zeros((num_channels,(input_length-args.seq_len)//stepsize))
-    prediction = torch.zeros((num_channels_y, (input_length-args.seq_len)+1))
-    truth = target[:, args.seq_len-1:]
-    num_sequences = ((input_length-args.seq_len) // args.seq_len)
+    prediction = torch.zeros((num_channels_y, (input_length - args.seq_len) + 1))
+    truth = target[:, args.seq_len - 1:]
+    num_sequences = ((input_length - args.seq_len) // args.seq_len)
     for offset in range(0, args.seq_len):
-        x = torch.zeros(num_sequences, num_channels_x, args.seq_len)#.type('torch.FloatTensor')
+        x = torch.zeros(num_sequences, num_channels_x, args.seq_len)  # .type('torch.FloatTensor')
         if args.cuda:
             x = x.cuda()
         for channel in range(num_channels_x):
-            x[:, channel, :] = source[channel, offset:offset+num_sequences*args.seq_len].contiguous().view(num_sequences, args.seq_len)
+            x[:, channel, :] = source[channel, offset:offset + num_sequences * args.seq_len].contiguous().view(
+                num_sequences, args.seq_len)
         for counter, batch_idx in enumerate(range(0, x.size(0), args.batch_size)):
             if batch_idx + args.batch_size <= x.size(0):
-                batch = x[batch_idx:batch_idx+args.batch_size, :, :]
+                batch = x[batch_idx:batch_idx + args.batch_size, :, :]
             else:
                 batch = x[batch_idx:, :, :]
             batch_prediction = model(batch).detach()
             for i in range(batch_prediction.size(0)):
-                prediction[:, offset+batch_idx*args.seq_len+i*args.seq_len] = batch_prediction[i, :, -1]
+                prediction[:, offset + batch_idx * args.seq_len + i * args.seq_len] = batch_prediction[i, :, -1]
         if offset % 10 == 0:
-            print("Calculated offset ", offset, "of ", (args.seq_len-1))
+            print("Calculated offset ", offset, "of ", (args.seq_len - 1))
     source_plot = source[:, args.seq_len - 1:]
     if args.cuda:
         truth = truth.cpu()
@@ -140,7 +143,7 @@ def plot_and_save_prediction(model, source, target, args, clip=1e5, path="./figu
         ax.set_title("Target Channel {}".format(channel))
         loss = criterion(prediction[channel, :], truth[channel, :])
         naive_loss = criterion(torch.zeros(prediction[channel, :].shape), truth[channel, :])
-        ax.text(0, max(torch.max(prediction[channel, :]).item(), torch.max(truth[channel, :]).item())*0.9,
+        ax.text(0, max(torch.max(prediction[channel, :]).item(), torch.max(truth[channel, :]).item()) * 0.9,
                 "Model Loss: {0} \nNaive Loss: {1}".format(loss, naive_loss))
     for channel in range(num_channels_x):
         ax = plt.subplot(gs01[:, channel])
@@ -148,8 +151,8 @@ def plot_and_save_prediction(model, source, target, args, clip=1e5, path="./figu
         ax.legend(loc="upper right")
         ax.set_title("Feature Channel {}".format(channel))
     plt.subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.9)
-    figure.savefig(path+"prediction.svg", format='svg')
-    print("Plot(s) saved as %s" % path+"prediction.svg")
+    figure.savefig(path + "prediction.svg", format='svg')
+    print("Plot(s) saved as %s" % path + "prediction.svg")
     plt.show()
     return prediction, truth
 
@@ -165,13 +168,13 @@ def selfplot(model, source, target, args):
     truth = torch.zeros((num_channels, input_length))
     prediction[:, 0:args.seq_len] = source[0:args.seq_len, :].transpose(0, 1)
     truth[:, 0:args.seq_len] = target[0:args.seq_len, :].transpose(0, 1)
-    for time in range(10,min(input_length-args.seq_len-stepsize, max_steps), stepsize):
-        x = prediction[:, time:time+args.seq_len].unsqueeze(0)
-        y = target[time+1:time+args.seq_len+1, :].unsqueeze(0).transpose(1, 2)
+    for time in range(10, min(input_length - args.seq_len - stepsize, max_steps), stepsize):
+        x = prediction[:, time:time + args.seq_len].unsqueeze(0)
+        y = target[time + 1:time + args.seq_len + 1, :].unsqueeze(0).transpose(1, 2)
         current_prediction = model(x).detach()
-        prediction[:, args.seq_len+int(time/stepsize)] = current_prediction.view(num_channels, args.seq_len)[:, -1:]
-        truth[:, int(args.seq_len+time/stepsize)] = y.view(num_channels, args.seq_len)[:, -1:]
-        if time % 1000*stepsize == 0:
+        prediction[:, args.seq_len + int(time / stepsize)] = current_prediction.view(num_channels, args.seq_len)[:, -1:]
+        truth[:, int(args.seq_len + time / stepsize)] = y.view(num_channels, args.seq_len)[:, -1:]
+        if time % 1000 * stepsize == 0:
             print("Calculating time step ", time)
     return prediction, truth
 
@@ -184,11 +187,11 @@ def plot_and_save(y_ranges, y_names, path, x_ranges=[], x_names=[], texts=[], **
         for index in range(len(x_ranges)):
             x_names.append("Input Feature %i" % index)
     if len(texts) < len(y_ranges):
-        for i in range(len(y_ranges)-len(texts)):
+        for i in range(len(y_ranges) - len(texts)):
             texts.append("")
     figure = plt.figure(figsize=(25, 8))
     for channel in range(len(y_ranges)):
-        ax = plt.subplot(2, int(len(y_ranges)/2+0.5), channel + 1)
+        ax = plt.subplot(2, int(len(y_ranges) / 2 + 0.5), channel + 1)
         ax.plot(x_ranges[channel], y_ranges[channel], **plot_kwargs)
         ax.legend()
         ax.set_title(y_names[channel])
@@ -201,16 +204,16 @@ def plot_and_save(y_ranges, y_names, path, x_ranges=[], x_names=[], texts=[], **
 
 
 def make_experiment_dir(path):
-    exp_folder = path + (str(datetime.now())+"/").replace(":", "-")
+    exp_folder = path + (str(datetime.now()) + "/").replace(":", "-")
     os.makedirs(exp_folder)
     return exp_folder
 
 
 def save_args(path, args):
     print("Saving Parameters...")
-    with open(path+"config.txt", "w") as config_file:
+    with open(path + "config.txt", "w") as config_file:
         for arg in vars(args):
             line = str(arg) + "     " + str(getattr(args, arg)) + "\n"
             config_file.write(line)
     config_file.close()
-    print('Saved as %s' % path+"config.txt")
+    print('Saved as %s' % path + "config.txt")

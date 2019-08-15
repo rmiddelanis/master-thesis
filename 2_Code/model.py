@@ -1,12 +1,14 @@
-import sys
+import time
+
 import math
 import torch
 import torch.optim as opt
-import time
-from utils import get_batch, save_model
-from sklearn.base import BaseEstimator, RegressorMixin
-from torch import nn
+from sklearn.base import BaseEstimator
+from sklearn.base import RegressorMixin
 from tcn import TemporalConvNet
+from torch import nn
+from utils import get_batch
+from utils import save_model
 
 
 class TCN(nn.Module):
@@ -73,15 +75,19 @@ class TCN(nn.Module):
                     epoch_valid_losses = self.evaluate(x_valid, y_valid)
                     epoch_valid_loss_avg = sum(epoch_valid_losses) / len(epoch_valid_losses)
                     all_epoch_valid_losses.append(epoch_valid_loss_avg)
-                    self.print_train_status(pre_sep=True, text='| End of epoch {:3d} | valid loss {:5.3f} | valid bpc {:8.3f}'.format(
-                        epoch, epoch_valid_loss_avg, epoch_valid_loss_avg / math.log(2)), post_sep=False)
+                    self.print_train_status(pre_sep=True,
+                                            text='| End of epoch {:3d} | valid loss {:5.3f} | valid bpc {:8.3f}'.format(
+                                                epoch, epoch_valid_loss_avg, epoch_valid_loss_avg / math.log(2)),
+                                            post_sep=False)
                 else:
                     all_epoch_valid_losses.append(-1)
                 epoch_test_losses = self.evaluate(x_test, y_test)
                 epoch_test_loss_avg = sum(epoch_test_losses) / len(epoch_test_losses)
                 all_epoch_test_losses.append(epoch_test_loss_avg)
-                self.print_train_status(pre_sep=False, text='| End of epoch {:3d} | test loss {:5.3f} | test bpc {:8.3f}'.format(
-                    epoch, epoch_test_loss_avg, epoch_test_loss_avg / math.log(2)), post_sep=True)
+                self.print_train_status(pre_sep=False,
+                                        text='| End of epoch {:3d} | test loss {:5.3f} | test bpc {:8.3f}'.format(
+                                            epoch, epoch_test_loss_avg, epoch_test_loss_avg / math.log(2)),
+                                        post_sep=True)
                 if lr_adapt is not None:
                     self.adapt_learn_rate(epoch, lr_adapt, all_epoch_valid_losses)
                     if self.config.lr < 1e-6:
@@ -121,13 +127,14 @@ class TCN(nn.Module):
             self.optimizer.step()
             total_loss += loss.item()
             losses.append(loss.item())
-            if (batch_idx+1) % self.config.log_interval == 0:
+            if (batch_idx + 1) % self.config.log_interval == 0:
                 cur_loss = total_loss / self.config.log_interval
                 elapsed = time.time() - start_time
                 print('| epoch {:3d} | {:5d}/{:5d} batches | lr {:02.5f} | ms/batch {:5.2f} | '
                       'loss {:5.3f} | bpc {:5.3f}'.format(
-                    epoch, batch_idx+1, int((source_len-self.config.seq_len) / self.config.seqstepwidth), self.config.lr,
-                    elapsed * 1000 / self.config.log_interval, cur_loss, cur_loss / math.log(2)))
+                    epoch, batch_idx + 1, int((source_len - self.config.seq_len) / self.config.seqstepwidth),
+                    self.config.lr,
+                           elapsed * 1000 / self.config.log_interval, cur_loss, cur_loss / math.log(2)))
                 total_loss = 0
                 start_time = time.time()
         return losses
@@ -202,7 +209,8 @@ class ModelConfig:
 
 class NetworkEvaluator(BaseEstimator, RegressorMixin):
     def __init__(self, input_size, output_size, cuda=True, ksize=5, dropout=0.25, clip=0.3, epochs=150, levels=4,
-                 log_interval=5, lr=1e-3, optim='Adam', nhid=150, validseqlen=1, seqstepwidth=50, seq_len=100, batch_size=16):
+                 log_interval=5, lr=1e-3, optim='Adam', nhid=150, validseqlen=1, seqstepwidth=50, seq_len=100,
+                 batch_size=16):
         self.input_size = input_size
         self.output_size = output_size
         self.dropout = dropout
@@ -220,7 +228,8 @@ class NetworkEvaluator(BaseEstimator, RegressorMixin):
         self.seq_len = seq_len
         self.batch_size = batch_size
         self.model = TCN(input_size, output_size, cuda=cuda, ksize=ksize, dropout=dropout, clip=clip, epochs=epochs,
-                         levels=levels, log_interval=log_interval, lr=lr, optim=optim, nhid=nhid, validseqlen=validseqlen,
+                         levels=levels, log_interval=log_interval, lr=lr, optim=optim, nhid=nhid,
+                         validseqlen=validseqlen,
                          seqstepwidth=seqstepwidth, seq_len=seq_len, batch_size=batch_size)
 
     def fit(self, x_train, y_train):
@@ -238,6 +247,6 @@ class NetworkEvaluator(BaseEstimator, RegressorMixin):
         if self.cuda:
             x_test = x_test.cuda()
             y_test = y_test.cuda()
-        losses = self.model.evaluate(x_test,y_test)
+        losses = self.model.evaluate(x_test, y_test)
         average_loss = sum(losses) / len(losses)
-        return 1/average_loss
+        return 1 / average_loss

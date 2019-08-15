@@ -1,10 +1,15 @@
 import argparse
-import torch
-from model import TCN, NetworkEvaluator
-from utils import data_generator, make_experiment_dir, save_args, plot_and_save_prediction, plot_and_save
-from sklearn.model_selection import RandomizedSearchCV
-import numpy as np
 
+import numpy as np
+import torch
+from model import NetworkEvaluator
+from model import TCN
+from sklearn.model_selection import RandomizedSearchCV
+from utils import data_generator
+from utils import make_experiment_dir
+from utils import plot_and_save
+from utils import plot_and_save_prediction
+from utils import save_args
 
 parser = argparse.ArgumentParser(description='Sequence Modeling - Simply Cozy')
 parser.add_argument('--cuda', action='store_false',
@@ -70,8 +75,8 @@ dataset_config = {
 }
 
 test_hyperparams = {
-    "dropout": [-1]+list(np.linspace(0.05, 0.6, 12)),
-    "clip": [-1]+list(np.linspace(0.05, 0.6, 12)),
+    "dropout": [-1] + list(np.linspace(0.05, 0.6, 12)),
+    "clip": [-1] + list(np.linspace(0.05, 0.6, 12)),
     "ksize": [2, 4, 6, 8, 10],
     "levels": [2, 4, 6, 8],
     "lr": [1e-2, 1e-3, 1e-4, 1e-5, 1e-6],

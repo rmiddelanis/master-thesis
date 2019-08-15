@@ -1,8 +1,8 @@
 import pickle
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 
 
 class DataCleaner:
@@ -42,9 +42,9 @@ class DataCleaner:
 
     # Note: Pot. implement weights for train-test split to account for different lengths of sequences (in data_id)
     def _split_data_(self):
-        train_data = self.data.cleaned.iloc[:int(len(self.data.cleaned)*(1-self.test_size)), :]
-        test_data = self.data.cleaned.iloc[int(len(self.data.cleaned)*(1-self.test_size)):, :]
-        self.data.sampled = self.data.cleaned.loc[self.data.cleaned.index.values % self.sampling_size == 0,:]
+        train_data = self.data.cleaned.iloc[:int(len(self.data.cleaned) * (1 - self.test_size)), :]
+        test_data = self.data.cleaned.iloc[int(len(self.data.cleaned) * (1 - self.test_size)):, :]
+        self.data.sampled = self.data.cleaned.loc[self.data.cleaned.index.values % self.sampling_size == 0, :]
         self.data.scaler.fit(pd.concat([train_data, test_data]))
         train_data = train_data.reset_index(drop=True)
         test_data = test_data.reset_index(drop=True)
@@ -81,12 +81,13 @@ class Data:
         if sum(valid_list) != 1:
             raise ValueError('train_valid_split doesnt sum up to 1')
         if max(valid_list) > valid_list[0]:
-            raise ValueError('Train data set is smaller than validation data sets (Note: First percentage gives size of train data set)')
+            raise ValueError(
+                'Train data set is smaller than validation data sets (Note: First percentage gives size of train data set)')
         self.train_split_idx = [0]
         total_size = 0
         for size in valid_list:
             total_size = total_size + size
-            self.train_split_idx.append(int(len(self.x_train)*total_size))
+            self.train_split_idx.append(int(len(self.x_train) * total_size))
             if self.train_split_idx[1] <= 0:
                 raise ValueError('train data set too small')
         self.split_valid_train_set()
@@ -98,16 +99,16 @@ class Data:
             if idx_counter > 0:
                 first_index = self.train_split_idx[idx_counter]
                 second_index = self.train_split_idx[idx_counter + 1]
-                self.x_valid[idx_counter - 1] = self.x_train[first_index:second_index,:]
-                self.y_valid[idx_counter - 1] = self.y_train[first_index:second_index,:]
+                self.x_valid[idx_counter - 1] = self.x_train[first_index:second_index, :]
+                self.y_valid[idx_counter - 1] = self.y_train[first_index:second_index, :]
         self.x_train = self.x_train[self.train_split_idx[0]:self.train_split_idx[1], :]
         self.y_train = self.y_train[self.train_split_idx[0]:self.train_split_idx[1], :]
 
     def __str__(self):
         out_str = 'Data Class containing: \n'
-        out_str+='Scaler: '+str(self.scaler)+'\n'
-        out_str+='Labels: '+str(self.labels)+'\n'
-        return(out_str)
+        out_str += 'Scaler: ' + str(self.scaler) + '\n'
+        out_str += 'Labels: ' + str(self.labels) + '\n'
+        return (out_str)
 
     def __repr__(self):
         return self.__str__()

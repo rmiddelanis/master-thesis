@@ -1,20 +1,24 @@
-import torch
-import torch.nn as nn
+import json
 import os
 import pickle
-import json
-import math
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from synthetic_data_generation import _rand_sine_sum
-from utils import data_generator, make_experiment_dir, save_model, plot_and_save
-from model import TCN
-import scipy.stats as stats
-from matplotlib import colors
-import matplotlib
 import warnings
+
+import math
+import matplotlib
+import matplotlib.gridspec as gridspec
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scipy.stats as stats
+import torch
+import torch.nn as nn
+from matplotlib import colors
+from model import TCN
+from synthetic_data_generation import _rand_sine_sum
+from utils import data_generator
+from utils import make_experiment_dir
+from utils import plot_and_save
+from utils import save_model
 
 experiment_config = {
     'cuda': True,
@@ -216,7 +220,7 @@ def prepare_qualitative_experiment_models(experiment_folder, round_, freeze, ran
 
 
 def prepare_quantitative_experiment_models(round_, model_a_frozen, model_b_frozen):
-    num_resblocks_to_keep = int(round_/2)
+    num_resblocks_to_keep = int(round_ / 2)
     if round_ > 1:
         model_a_frozen.tcn.network = nn.Sequential(*list(model_a_frozen.tcn.network.children())[:num_resblocks_to_keep])
         model_b_frozen.tcn.network = nn.Sequential(*list(model_b_frozen.tcn.network.children())[:num_resblocks_to_keep])
@@ -398,7 +402,7 @@ def plot_results(x, y, path, name):
     plt.xlabel("Transfer Level")
     plt.ylabel("Loss")
     if experiment_config['plot_svg']:
-        plt.savefig(path + name + ".svg", format = 'svg')
+        plt.savefig(path + name + ".svg", format='svg')
     else:
         plt.savefig(path + name + ".pgf", transparent=True)
     print("Plot(s) saved as %s" % path + name + ".svg")
@@ -424,7 +428,8 @@ def make_figures(experiment_ensemble_dir):
         experiment_dir = os.path.join(experiment_ensemble_dir, experiment_ensemble_dir_entry) + "/"
         experiment_name = experiment_ensemble_dir_entry
         if os.path.isdir(experiment_dir):
-            all_losses_a, all_losses_b, best_model_losses, final_model_losses, base_a_losses = load_experiment_losses(experiment_dir)
+            all_losses_a, all_losses_b, best_model_losses, final_model_losses, base_a_losses = load_experiment_losses(
+                experiment_dir)
             best_model_losses_mean = np.mean(best_model_losses, axis=0)
             final_model_losses_mean = np.mean(final_model_losses, axis=0)
             best_base_a_losses = np.min(base_a_losses, axis=1)
@@ -433,7 +438,7 @@ def make_figures(experiment_ensemble_dir):
             if experiment_name in ['BnA', 'BnA_plus', 'full_weight_init_w_partial_freeze']:
                 all_best_base_a_losses_means.append(best_base_a_losses_mean)
             idx_to_name_mapping.append(experiment_name)
-            name_to_idx_mapping[experiment_name] = len(idx_to_name_mapping)-1
+            name_to_idx_mapping[experiment_name] = len(idx_to_name_mapping) - 1
             if experiment_name in ['BnA', 'BnA_plus', 'full_weight_init_w_partial_freeze', 'random_reference']:
                 make_probplot(experiment_dir, experiment_name, best_model_losses, best_base_a_losses, selffer_name)
                 make_qualitative_experiment_lossplot(experiment_dir, experiment_name, best_model_losses,
@@ -461,7 +466,7 @@ def load_experiment_losses(experiment_dir):
     for experiment_dir_entry in os.listdir(experiment_dir):
         if os.path.isdir(os.path.join(experiment_dir, experiment_dir_entry)):
             base_a_losses_iter = pickle.load(open(os.path.join(experiment_dir, experiment_dir_entry, "0_base_A",
-                                                      "test_losses_array.p"), "rb"))
+                                                               "test_losses_array.p"), "rb"))
             num_iterations = num_iterations + 1
             base_a_losses.append(base_a_losses_iter)
     base_a_losses = np.array(base_a_losses)
@@ -501,11 +506,12 @@ def make_duration_plot(experiment_dir, experiment_name, all_losses_a, all_losses
     fig_objects['base'], = ax.plot([0, num_layers],
                                    [best_model_losses_mean_indices_base, best_model_losses_mean_indices_base],
                                    '--', color='k', markersize=markersize,
-             linewidth=2, label='Mean Base Training Time')
+                                   linewidth=2, label='Mean Base Training Time')
     fig_object_labels['base'] = 'Base {}'.format(selffer_name[-1:])
-    ax.fill_between(np.arange(num_layers)+1, conf_interval_transfer[0], conf_interval_transfer[1], color='r',
+    ax.fill_between(np.arange(num_layers) + 1, conf_interval_transfer[0], conf_interval_transfer[1], color='r',
                     alpha=0.25)
-    fig_objects['transfer'], = ax.plot(np.arange(num_layers+1), np.concatenate(([best_model_losses_mean_indices_base], best_model_losses_mean_indices_b)), color='r')
+    fig_objects['transfer'], = ax.plot(np.arange(num_layers + 1), np.concatenate(
+        ([best_model_losses_mean_indices_base], best_model_losses_mean_indices_b)), color='r')
     fig_object_labels['transfer'] = 'transfer {}'.format(transfer_name)
     ax.set_ylim((0, 120))
     if selffer_name[-1] == "B":
@@ -520,9 +526,13 @@ def make_duration_plot(experiment_dir, experiment_name, all_losses_a, all_losses
     ax.set_ylabel('Training Time [Epcohs]')
     plt.tight_layout()
     if experiment_config['plot_svg']:
-        fig.savefig(os.path.join(experiment_dir, "duration_plot_" + experiment_name + get_fig_name_suffix(selffer_name) + ".svg"), format='svg')
+        fig.savefig(os.path.join(experiment_dir,
+                                 "duration_plot_" + experiment_name + get_fig_name_suffix(selffer_name) + ".svg"),
+                    format='svg')
     else:
-        fig.savefig(os.path.join(experiment_dir, "duration_plot_" + experiment_name + get_fig_name_suffix(selffer_name) + ".pgf"), transparent=True)
+        fig.savefig(os.path.join(experiment_dir,
+                                 "duration_plot_" + experiment_name + get_fig_name_suffix(selffer_name) + ".pgf"),
+                    transparent=True)
     plt.close('all')
 
 
@@ -534,8 +544,10 @@ def get_best_losses_indices(all_losses_a, all_losses_b, base_a_losses):
     best_model_losses_indices_base = np.zeros(base_a_losses.shape[0])
     for it in range(num_iterations):
         for layer in range(num_layers):
-            best_model_losses_indices_a[it, layer] = np.where(all_losses_a[it, layer, :] == np.min(all_losses_a[it, layer, :]))[0]
-            best_model_losses_indices_b[it, layer] = np.where(all_losses_b[it, layer, :] == np.min(all_losses_b[it, layer, :]))[0]
+            best_model_losses_indices_a[it, layer] = \
+                np.where(all_losses_a[it, layer, :] == np.min(all_losses_a[it, layer, :]))[0]
+            best_model_losses_indices_b[it, layer] = \
+                np.where(all_losses_b[it, layer, :] == np.min(all_losses_b[it, layer, :]))[0]
         best_model_losses_indices_base[it] = np.where(base_a_losses[it, :] == np.min(base_a_losses[it, :]))[0]
     return best_model_losses_indices_a, best_model_losses_indices_b, best_model_losses_indices_base
 
@@ -555,9 +567,13 @@ def make_probplot(experiment_dir, experiment_name, best_model_losses, best_base_
         ax_layer_transfer.set_title('Transfer Model (l = {})'.format((layer + 1)))
     plt.tight_layout()
     if experiment_config['plot_svg']:
-        fig_probplot.savefig(os.path.join(experiment_dir, "probplot_" + experiment_name + get_fig_name_suffix(selffer_name) + ".svg"), format='svg')
+        fig_probplot.savefig(
+            os.path.join(experiment_dir, "probplot_" + experiment_name + get_fig_name_suffix(selffer_name) + ".svg"),
+            format='svg')
     else:
-        fig_probplot.savefig(os.path.join(experiment_dir, "probplot_" + experiment_name + get_fig_name_suffix(selffer_name) + ".pgf"), transparent=True)
+        fig_probplot.savefig(
+            os.path.join(experiment_dir, "probplot_" + experiment_name + get_fig_name_suffix(selffer_name) + ".pgf"),
+            transparent=True)
     plt.close('all')
 
 
@@ -615,15 +631,15 @@ def make_qualitative_experiment_lossplot(experiment_dir, experiment_name, best_m
               linewidth=2)
     if experiment_name != 'random_reference':
         ax02.fill_between(range(1, len(best_model_losses_mean) + 1),
-                                                                conf_interval_selffer[0], conf_interval_selffer[1],
-                                                                color='b', alpha=0.25)
+                          conf_interval_selffer[0], conf_interval_selffer[1],
+                          color='b', alpha=0.25)
         fig_objects['selffer_best_ln'], = ax02.plot(range(len(best_model_losses_mean) + 1),
                                                     np.concatenate(([base_a_mean], best_model_losses_mean[:, 0])),
                                                     color='b', linewidth=2)
         fig_object_labels['selffer_best_ln'] = 'selffer {}'.format(selffer_name)
     ax02.fill_between(range(1, len(best_model_losses_mean) + 1),
-                                                             conf_interval_transfer[0], conf_interval_transfer[1],
-                                                             color='r', alpha=0.25)
+                      conf_interval_transfer[0], conf_interval_transfer[1],
+                      color='r', alpha=0.25)
     fig_objects['transfer_best_ln'], = ax02.plot(range(len(best_model_losses_mean) + 1),
                                                  np.concatenate(([base_a_mean], best_model_losses_mean[:, 1])),
                                                  color='r', linewidth=2)
@@ -636,9 +652,13 @@ def make_qualitative_experiment_lossplot(experiment_dir, experiment_name, best_m
     ax02.set_ylim(figure_y_limits[idx_to_name_mapping[-1]][1])
     fig1.tight_layout()
     if experiment_config['plot_svg']:
-        plt.savefig(os.path.join(experiment_dir, "best_model_plot__" + experiment_name + get_fig_name_suffix(selffer_name) + ".svg"), format='svg')
+        plt.savefig(os.path.join(experiment_dir,
+                                 "best_model_plot__" + experiment_name + get_fig_name_suffix(selffer_name) + ".svg"),
+                    format='svg')
     else:
-        plt.savefig(os.path.join(experiment_dir, "best_model_plot__" + experiment_name + get_fig_name_suffix(selffer_name) + ".pgf"), transparent=True)
+        plt.savefig(os.path.join(experiment_dir,
+                                 "best_model_plot__" + experiment_name + get_fig_name_suffix(selffer_name) + ".pgf"),
+                    transparent=True)
     plt.close('all')
 
 
@@ -646,7 +666,8 @@ def make_quantitative_experiment_lossplot(experiment_dir, experiment_name, best_
                                           selffer_name, transfer_name, idx_to_name_mapping):
     base_a_mean = np.mean(best_base_a_losses, axis=0)
     best_model_losses_mean = np.mean(best_model_losses, axis=0)
-    all_losses_mean = np.concatenate((best_model_losses_mean, np.array([base_a_mean, base_a_mean]).reshape((1,2))), axis=0)
+    all_losses_mean = np.concatenate((best_model_losses_mean, np.array([base_a_mean, base_a_mean]).reshape((1, 2))),
+                                     axis=0)
     all_losses_mean_diff = all_losses_mean[:-1, :] - all_losses_mean[1:, :]
     all_losses_mean_diff = all_losses_mean_diff / np.array([best_model_losses_mean[0, 0] - base_a_mean,
                                                             best_model_losses_mean[0, 1] - base_a_mean]) * 100
@@ -676,7 +697,7 @@ def make_quantitative_experiment_lossplot(experiment_dir, experiment_name, best_
     ax02 = fig1.add_subplot(gs0[1:, :])
     fig_objects['selffer_best_ln'] = ax02.scatter(range(len(best_model_losses_mean)),
                                                   best_model_losses_mean[:, 0], marker='o', c='b')
-    ax02.plot(range(len(best_model_losses_mean)+1), np.concatenate((best_model_losses_mean[:, 0], [base_a_mean])),
+    ax02.plot(range(len(best_model_losses_mean) + 1), np.concatenate((best_model_losses_mean[:, 0], [base_a_mean])),
               c='b')
     fig_objects['transfer_best_ln'] = ax02.scatter(range(len(best_model_losses_mean)), best_model_losses_mean[:, 1],
                                                    marker='o', c='r')
@@ -690,29 +711,33 @@ def make_quantitative_experiment_lossplot(experiment_dir, experiment_name, best_
     ax02.set_ylim(figure_y_limits[idx_to_name_mapping[-1]][1])
     ax02.set_ylim((0, ax02.get_ylim()[1] * 1.8))
 
-    matplotlib.rcParams.update({'font.size': global_font_size*0.8})
+    matplotlib.rcParams.update({'font.size': global_font_size * 0.8})
 
     ax02_ydim = ax02.get_ylim()[1] - ax02.get_ylim()[0]
     ax02_inset_xpos = 1
-    ax02_inset_ypos = np.max(best_model_losses_mean[1, :]) + 0.15*ax02_ydim
+    ax02_inset_ypos = np.max(best_model_losses_mean[1, :]) + 0.15 * ax02_ydim
     ax02_inset_width = 7
-    ax02_inset_height = ax02.get_ylim()[1] - 0.08*ax02_ydim - ax02_inset_ypos
+    ax02_inset_height = ax02.get_ylim()[1] - 0.08 * ax02_ydim - ax02_inset_ypos
     ax02_inset = ax02.inset_axes([ax02_inset_xpos, ax02_inset_ypos, ax02_inset_width, ax02_inset_height],
                                  transform=ax02.transData)
     ax02_inset.set_xlim((1, 8))
     ax02_inset.spines['top'].set_visible(False)
     ax02_inset.spines['right'].set_visible(False)
-    ax02_inset.set_ylabel('layer\n knowledge'+ r' $\kappa$ ' + '[%]')
+    ax02_inset.set_ylabel('layer\n knowledge' + r' $\kappa$ ' + '[%]')
     ax02_inset.fill_between(np.arange(len(all_losses_mean_diff[:, 0])) + 1, all_losses_mean_diff[:, 0], color='b',
                             alpha=0.25, label='Layer Knowledge Model {}'.format(selffer_name[-1:]))
     ax02_inset.fill_between(np.arange(len(all_losses_mean_diff[:-1, 1])) + 1, all_losses_mean_diff[:-1, 1], color='r',
-                      alpha=0.25, label='Layer Knowledge Model {}'.format(transfer_name[0]))
+                            alpha=0.25, label='Layer Knowledge Model {}'.format(transfer_name[0]))
     matplotlib.rcParams.update({'font.size': global_font_size})
     fig1.tight_layout()
     if experiment_config['plot_svg']:
-        plt.savefig(os.path.join(experiment_dir, "best_model_plot__" + experiment_name + get_fig_name_suffix(selffer_name) + ".svg"), format='svg')
+        plt.savefig(os.path.join(experiment_dir,
+                                 "best_model_plot__" + experiment_name + get_fig_name_suffix(selffer_name) + ".svg"),
+                    format='svg')
     else:
-        plt.savefig(os.path.join(experiment_dir, "best_model_plot__" + experiment_name + get_fig_name_suffix(selffer_name) + ".pgf"), transparent=True)
+        plt.savefig(os.path.join(experiment_dir,
+                                 "best_model_plot__" + experiment_name + get_fig_name_suffix(selffer_name) + ".pgf"),
+                    transparent=True)
     plt.close('all')
 
 
@@ -770,9 +795,13 @@ def make_all_experiments_lossplot(experiment_ensemble_dir, all_best_base_a_losse
     plt.legend(legend_handles[0], legend_handles[1], numpoints=1)
     fig2.tight_layout()
     if experiment_config['plot_svg']:
-        plt.savefig(os.path.join(experiment_ensemble_dir, "best_model_plot_line" + get_fig_name_suffix(selffer_name) + ".svg"), format='svg')
+        plt.savefig(
+            os.path.join(experiment_ensemble_dir, "best_model_plot_line" + get_fig_name_suffix(selffer_name) + ".svg"),
+            format='svg')
     else:
-        plt.savefig(os.path.join(experiment_ensemble_dir, "best_model_plot_line" + get_fig_name_suffix(selffer_name) + ".pgf"), transparent=True)
+        plt.savefig(
+            os.path.join(experiment_ensemble_dir, "best_model_plot_line" + get_fig_name_suffix(selffer_name) + ".pgf"),
+            transparent=True)
     plt.close('all')
 
     fig3 = plt.figure(6, figsize=[10, 5])
@@ -831,9 +860,13 @@ def make_all_experiments_lossplot(experiment_ensemble_dir, all_best_base_a_losse
     fig3.tight_layout()
     # plt.show(block=True)
     if experiment_config['plot_svg']:
-        plt.savefig(os.path.join(experiment_ensemble_dir, "best_model_plot_line_shadowed" + get_fig_name_suffix(selffer_name) + ".svg"), format='svg')
+        plt.savefig(os.path.join(experiment_ensemble_dir,
+                                 "best_model_plot_line_shadowed" + get_fig_name_suffix(selffer_name) + ".svg"),
+                    format='svg')
     else:
-        plt.savefig(os.path.join(experiment_ensemble_dir, "best_model_plot_line_shadowed" + get_fig_name_suffix(selffer_name) + ".pgf"), transparent=True)
+        plt.savefig(os.path.join(experiment_ensemble_dir,
+                                 "best_model_plot_line_shadowed" + get_fig_name_suffix(selffer_name) + ".pgf"),
+                    transparent=True)
     plt.close('all')
 
 
@@ -847,13 +880,13 @@ def get_conf_intervals(base_losses, model_losses, alpha):
     lower_bounds = []
     upper_bounds = []
     for layer in range(model_losses.shape[1]):
-        df = int((sd_base**2 / n + sd_model[layer]**2 / m)**2 /
-                 ((sd_base**2 / n)**2 / (n-1) + (sd_model[layer]**2 / m)**2 / (m-1)))
+        df = int((sd_base ** 2 / n + sd_model[layer] ** 2 / m) ** 2 /
+                 ((sd_base ** 2 / n) ** 2 / (n - 1) + (sd_model[layer] ** 2 / m) ** 2 / (m - 1)))
         t_value = stats.t.ppf(alpha / 2, df=df)
-        denominator = math.sqrt(sd_base**2 / m + sd_model[layer]**2 / n)
+        denominator = math.sqrt(sd_base ** 2 / m + sd_model[layer] ** 2 / n)
         confidence_margin = t_value * denominator
-        lower_bounds.append(mean_model[layer]-confidence_margin)
-        upper_bounds.append(mean_model[layer]+confidence_margin)
+        lower_bounds.append(mean_model[layer] - confidence_margin)
+        upper_bounds.append(mean_model[layer] + confidence_margin)
     return [lower_bounds, upper_bounds]
 
 
@@ -901,7 +934,8 @@ if __name__ == "__main__":
     # additional experiment with full weight initialization and partial freeze
     full_weight_init_w_partial_freeze_path = experiment_ensemble_folder + "full_weight_init_w_partial_freeze/"
     os.makedirs(full_weight_init_w_partial_freeze_path)
-    do_experiment_series(experiment_series_dir=full_weight_init_w_partial_freeze_path, num_repetitions=experiment_config['num_repetitions'],
+    do_experiment_series(experiment_series_dir=full_weight_init_w_partial_freeze_path,
+                         num_repetitions=experiment_config['num_repetitions'],
                          is_quantitative_experiment=False, freeze=True, random_init=False, diff_learning_rate=False,
                          train_base=True)
     # make_figures(experiment_ensemble_folder)
