@@ -29,7 +29,7 @@ required:
 
 Clone the repository:
 ```
-git clone https://gitlab.iavgroup.local/tm-f/tm-f1/students/masterarbeit_robin.git
+git clone git@github.com:rmiddelanis/master-thesis.git
 ```
 
 The following Python scripts are requried for the minimal working example[^1]:
